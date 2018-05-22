@@ -11,17 +11,20 @@ import {environment} from '../../../environments/environment';
 export class ContactHttpService {
 
   url: string;
+
   constructor(private httpClient: HttpClient) {
     this.url = environment.apiEndpointUrl;
   }
+
   get(): Observable<Contact[]> {
     return this.httpClient.get(this.url).pipe(map(response => {
       return response as Contact[];
     }));
   }
+
   getById(id): Observable<Contact> {
     return this.httpClient.get(this.url + '/' + id).pipe(map(response => {
       return response as Contact;
-    } ));
+    }));
   }
 }
