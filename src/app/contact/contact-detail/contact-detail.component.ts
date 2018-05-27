@@ -14,45 +14,83 @@ import {ToolbarAction} from '../../ui/toolbar/toolbar-action';
 export class ContactDetailComponent implements OnInit {
 
   contact: Contact;
+  editingEnabled: boolean;
+  contactId: any;
 
   constructor(private router: Router, private route: ActivatedRoute,
               private contactService: ContactService, private toolbar: ToolbarService) {
     this.contact = new Contact();
+    this.editingEnabled = false;
   }
 
   ngOnInit() {
-    this.toolbar.toolbarOptions.next(
-      new ToolbarOptions(
-        'Contact', [
-          new ToolbarAction(this.onEdit, 'edit')
-        ]));
 
-    const contactId = this.route.snapshot.paramMap.get('id');
+    this.contactId = this.route.snapshot.paramMap.get('id');
+    let toolbarActions: ToolbarAction[];
 
-    if (contactId == null) {
-      return;
+    if (this.contactId == null) {
+      // Create contact
+      this.editingEnabled = true;
+      toolbarActions = [];
+    } else {
+      // View/Edit contact
+      toolbarActions = [new ToolbarAction(this.onEdit.bind(this), 'edit')];
+
+      this.contactService.getContactById(this.contactId).subscribe(response => {
+        this.contact = response;
+        console.log(this.contact);
+      }, error => {
+        console.error('Getting contact failed!');
+        console.error(error);
+        this.router.navigate(['/contacts']);
+      });
     }
 
-    this.contactService.getContactById(contactId).subscribe(response => {
-      this.contact = response;
-      console.log(this.contact);
-    }, error => {
-      console.error('Getting contact failed!');
-      console.error(error);
-      this.router.navigate(['/contacts']);
-    });
-  }
+    this.toolbar.setToolbarOptions(new ToolbarOptions(true, 'Contact', toolbarActions));
 
-  onNavigateBack(): void {
-    this.router.navigate(['/contacts']);
   }
 
   onSave(): void {
-    console.log('TODO: Save');
+    if (this.contactId == null) {
+      // Create contact
+      this.editingEnabled = false;
+      this.contactService.createContact(this.contact).subscribe(response => {
+        console.log(response);
+        this.router.navigate(['/contacts']);
+      });
+    } else {
+      // Edit contact
+      this.editingEnabled = false;
+      this.contactService.updateContact(this.contact).subscribe(response => {
+        this.contact = response;
+      });
+    }
+
   }
 
   onEdit() {
-    console.log('TODO: activate/deactivate edit mode');
+    let toolbarActions: ToolbarAction[];
+    this.editingEnabled = !this.editingEnabled;
+    if (this.editingEnabled === true) {
+      // Edit mode on
+      console.log('Edit mode enabled');
+      toolbarActions = [
+        new ToolbarAction(this.onDelete.bind(this), 'delete'),
+        new ToolbarAction(this.onEdit.bind(this), 'edit')
+      ];
+    } else {
+      // Edit mode off
+      console.log('Edit mode disabled');
+      toolbarActions = [new ToolbarAction(this.onEdit.bind(this), 'edit')];
+    }
+    this.toolbar.setToolbarOptions(new ToolbarOptions(true, 'Contact', toolbarActions));
+  }
+
+  onDelete() {
+    this.editingEnabled = false;
+    this.contactService.deleteContact(this.contact).subscribe(() => {
+      this.router.navigate(['/contacts']);
+    });
   }
 
 }
